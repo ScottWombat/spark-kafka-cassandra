@@ -1,0 +1,30 @@
+Puplish json data to Topic
+
+>jq -rc . sampledata.json | docker-compose exec -T kafka kafka-console-producer.sh --topic movie_topic --broker-list kafka:9092
+
+Consumer topic
+>kafka kafka-console-consumer.sh --topic baeldung  --from-beginning --bootstrap-server kafka:9092
+
+Run app
+
+>java --add-opens=java.base/sun.nio.ch=ALL-UNNAMED -jar target/scala-2.12/hello-spark_1.0.jar 
+
+or 
+
+>spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 target/scala-2.12/hello-spark_1.0.jar 
+
+
+or run by docker
+
+docker-compose exec master spark-submit \
+ --master spark://master:7077 \
+ /app/spark-kafka.jar \
+ kafka:9092 stream-input 2000
+
+ or run by python
+
+ spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /src/streaming/read_test_stream.py
+
+
+ Public topic
+ >jq -rc . movie_data.json | kafka-console-producer.sh --topic movie_topic --broker-list kafka-node01:9092

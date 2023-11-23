@@ -1,0 +1,22 @@
+package org.apps.cassandra.services
+import org.apps.cassandra.model.Movie
+import org.apps.cassandra.services.MovieCassandraForeachWriter
+import org.apache.spark.sql.{Dataset, SaveMode, SparkSession}
+
+trait CassandraService {
+  /**
+    * Writes carDataset to CassandraDB.
+    *
+    * @param carDataset Dataset to write.
+    * @param spark SparkSession.
+    */
+  def writeStreamToCassandra(movieDataset: Dataset[Movie], spark: SparkSession): Unit = {
+
+    // Connecting to CassandraDB and writing streams to it.
+    movieDataset
+      .writeStream
+      .foreach(new MovieCassandraForeachWriter(spark))
+      .start()
+      .awaitTermination()
+  }
+}

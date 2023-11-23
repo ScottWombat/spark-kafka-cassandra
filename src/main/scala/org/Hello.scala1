@@ -1,0 +1,88 @@
+package org
+import java.io.File
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.spark.sql._
+import org.apache.spark.sql.types._
+
+
+object Hello {
+    def main(args: Array[String]): Unit = {
+       //sparkProcessing()
+       kafkaProcessing()
+       //test1()
+    }
+    def test1(): Unit = {
+      //val warehouseLocation = new File("movie_data.csv").getAbsolutePath
+      //println(warehouseLocation)
+      val path = os.home + "kafka-data" 
+      println(path)
+    }
+
+    def createSparkSession(): SparkSession = {
+       val warehouseLocation = os.home + "/spark-warehouse"
+
+       return SparkSession.builder()
+              .master("spark://spark-master:7077") //.master("local[1]")
+              .appName("SparkByExamples.com")
+              .config("spark.sql.warehouse.dir", warehouseLocation)
+              .config("spark.executor.memory", "1g")
+              .config("spark.executor.cores", "1")
+              .config("spark.driver.memory", "1g")
+              .getOrCreate();
+    }
+    def sparkProcessing(): Unit = {
+      val spark = createSparkSession()
+      val states = Map(("NY","New York"),("CA","California"),("FL","Florida"))
+      val countries = Map(("USA","United States of America"),("IN","India"))
+
+      val broadcastStates = spark.sparkContext.broadcast(states)
+      val broadcastCountries = spark.sparkContext.broadcast(countries)
+   
+      println(broadcastStates)
+      println(broadcastCountries.value)
+    
+      val data = Seq(("James","Smith","USA","CA"),
+                     ("Michael","Rose","USA","NY"),
+                     ("Robert","Williams","USA","CA"),
+                     ("Maria","Jones","USA","FL")
+      )
+
+      val rdd = spark.sparkContext.parallelize(data)
+      
+      val rdd2 = rdd.map(f=>{
+          val country = f._3
+          val state = f._4
+          val fullCountry = broadcastCountries.value.get(country).get
+          val fullState = broadcastStates.value.get(state).get
+          (f._1,f._2,fullCountry,fullState)
+      })
+      println(rdd2.collect().mkString("\n"))
+    }
+
+    def kafkaProcessing(): Unit = {
+      val spark = createSparkSession()
+      
+      val mySchema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("name", StringType),
+        StructField("year", IntegerType),
+        StructField("rating", DoubleType),
+        StructField("duration", IntegerType)
+      ))
+      var spark_data  = "/home/revit/hello_app/kafka_data/movie_*.csv"
+      
+      val streamingDataFrame = spark.readStream.schema(mySchema).csv(spark_data)
+
+      streamingDataFrame.selectExpr("CAST(id AS STRING) AS key", "to_json(struct(*)) AS value").writeStream
+          .format("kafka")
+          .option("topic", "first_topic")
+          .option("kafka.bootstrap.servers", "192.168.62.212:9092")
+          .option("checkpointLocation", "/home/revit/hello_app/kafka_data")
+          .start()
+          .awaitTermination()
+   
+    }
+}

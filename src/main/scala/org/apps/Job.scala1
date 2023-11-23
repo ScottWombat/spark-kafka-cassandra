@@ -1,0 +1,34 @@
+package org.apps
+import org.apps.cassandra.model.Movie
+import org.apps.cassandra.services.{CassandraService, KafkaService}
+import org.apache.spark.sql.{Dataset, SparkSession}
+/**
+  * Job is a Trait that contain abstract method run
+  * and extending KafkaService and CassandraService Traits.
+  */
+trait Job extends KafkaService with CassandraService {
+
+  def run(spark: SparkSession): Unit
+}
+/**
+  * RunJob Class extending Job Trait and implementing run method
+  * It also extends Logging Trait to add loggers.
+  */
+class RunJob extends Job {
+
+  /**
+    * Reading streams from Kafka and Writing it to Cassandra.
+    * @param spark SparkSession
+    */
+  override def run(spark: SparkSession): Unit = {
+
+    //"Reading streams from Kafka.
+    val movieDataset: Dataset[Movie] = readFromKafkaTopic(spark)
+
+    //do Transformations and Actions with the dataSet here
+
+    //writing t streams to CassandraDB
+    writeStreamToCassandra(movieDataset, spark)
+  }
+}
+

@@ -1,0 +1,26 @@
+package org.apps.cassandra.services
+import org.apps.cassandra.model.Movie
+import org.apps.cassandra.model.Movie._
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Dataset, SparkSession}
+
+trait KafkaService {
+  /**
+   * Reads DataFrame from kafka as dataset of Car
+   * @param spark SparkSession
+   * @return      Dataset of Car
+   */
+  def readFromKafkaTopic(spark: SparkSession): Dataset[Movie] = {
+    import spark.implicits._
+
+    //Connecting to kafka and reading streams.
+    spark.readStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", "192.168.62.212:9092")
+      .option("subscribe", "movie_topic")
+      .option("startingOffsets", "earliest")
+      .load()
+      .selectExpr("cast(value as string) as value")
+      .select(from_json(col("value"), movieSchema).as[Movie])
+  }
+}
